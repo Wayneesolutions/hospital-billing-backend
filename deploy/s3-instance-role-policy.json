@@ -1,0 +1,13 @@
+{
+  "_comment": "Attach this policy to the IAM role referenced as InstanceRoleArn in apprunner-service.json (HospitalBillingAppRunnerInstanceRole). This is what lets the running backend read/write bill PDFs in S3 WITHOUT any static AWS keys in the environment.",
+
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "BillPdfReadWrite",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Resource": "arn:aws:s3:::hospital-billing-bills-<ACCOUNT_ID>/bills/*"
+    }
+  ]
+}

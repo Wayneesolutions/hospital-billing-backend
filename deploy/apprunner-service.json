@@ -1,0 +1,52 @@
+{
+  "_comment": "CLI input for: aws apprunner create-service --cli-input-json file://apprunner-service.json — see deploy/README.md for the full walkthrough. This is the image-based deploy path (Dockerfile -> ECR -> App Runner), which is what backend/Dockerfile is built for. apprunner.yaml is a different, source-repo-based deploy path and isn't used here.",
+
+  "ServiceName": "hospital-billing-backend",
+
+  "SourceConfiguration": {
+    "AutoDeploymentsEnabled": true,
+    "AuthenticationConfiguration": {
+      "AccessRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/AppRunnerECRAccessRole"
+    },
+    "ImageRepository": {
+      "ImageIdentifier": "<ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/hospital-billing-backend:latest",
+      "ImageRepositoryType": "ECR",
+      "ImageConfiguration": {
+        "Port": "4000",
+        "RuntimeEnvironmentVariables": {
+          "PORT": "4000",
+          "CORS_ORIGIN": "https://your-frontend.vercel.app",
+          "AWS_REGION": "<REGION>",
+          "S3_BILLS_BUCKET": "hospital-billing-bills-<ACCOUNT_ID>"
+        },
+        "RuntimeEnvironmentSecrets": {
+          "DATABASE_URL": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:hospital-billing/database-url",
+          "JWT_SECRET": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:hospital-billing/jwt-secret"
+        }
+      }
+    }
+  },
+
+  "InstanceConfiguration": {
+    "Cpu": "0.25 vCPU",
+    "Memory": "0.5 GB",
+    "InstanceRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/HospitalBillingAppRunnerInstanceRole"
+  },
+
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP",
+    "Path": "/health",
+    "Interval": 10,
+    "Timeout": 5,
+    "HealthyThreshold": 1,
+    "UnhealthyThreshold": 5
+  },
+
+  "NetworkConfiguration": {
+    "_comment": "Only needed if RDS sits in a private VPC (recommended). Create an App Runner VPC connector pointed at the subnets/security group that can reach RDS, then reference it here — see deploy/README.md.",
+    "EgressConfiguration": {
+      "EgressType": "VPC",
+      "VpcConnectorArn": "arn:aws:apprunner:<REGION>:<ACCOUNT_ID>:vpcconnector/hospital-billing-vpc-connector/.../..."
+    }
+  }
+}

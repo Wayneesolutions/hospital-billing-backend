@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  front_desk
+  doctor
+  pharmacy
+  lab
+  accounts_admin
+}
+
+enum PatientStatus {
+  admitted
+  discharged
+}
+
+enum Department {
+  OPD
+  LAB
+  PHARMACY
+  OT
+  NURSING
+  ROOM
+  OTHER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  role         Role
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  patientsCreated Patient[]   @relation("PatientCreatedBy")
+  billItemsLogged BillItem[]  @relation("BillItemLoggedBy")
+  billsGenerated  Bill[]      @relation("BillGeneratedBy")
+
+  @@map("users")
+}
+
+model Patient {
+  id               String        @id @default(uuid())
+  name             String
+  age              Int
+  gender           String
+  contact          String
+  admissionDate    DateTime      @default(now()) @map("admission_date")
+  referringDoctor  String?       @map("referring_doctor")
+  wardRoom         String?       @map("ward_room")
+  status           PatientStatus @default(admitted)
+  dischargeDate    DateTime?     @map("discharge_date")
+  createdById      String        @map("created_by")
+  createdBy        User          @relation("PatientCreatedBy", fields: [createdById], references: [id])
+
+  billItems BillItem[]
+  bill      Bill?
+
+  @@map("patients")
+  @@index([name])
+  @@index([status])
+}
+
+model BillItem {
+  id          String     @id @default(uuid())
+  patientId   String     @map("patient_id")
+  patient     Patient    @relation(fields: [patientId], references: [id])
+  department  Department
+  serviceName String     @map("service_name")
+  amount      Decimal    @db.Decimal(10, 2)
+  loggedById  String     @map("logged_by")
+  loggedBy    User       @relation("BillItemLoggedBy", fields: [loggedById], references: [id])
+  timestamp   DateTime   @default(now())
+  locked      Boolean    @default(false)
+  isLateEntry Boolean    @default(false) @map("is_late_entry")
+
+  @@map("bill_items")
+  @@index([patientId])
+  @@index([department])
+  @@index([timestamp])
+}
+
+model Bill {
+  id              String   @id @default(uuid())
+  patientId       String   @unique @map("patient_id")
+  patient         Patient  @relation(fields: [patientId], references: [id])
+  subtotalByDept  Json     @map("subtotal_by_dept")
+  grandTotal      Decimal  @map("grand_total") @db.Decimal(10, 2)
+  generatedAt     DateTime @default(now()) @map("generated_at")
+  generatedById   String   @map("generated_by")
+  generatedBy     User     @relation("BillGeneratedBy", fields: [generatedById], references: [id])
+  pdfUrl          String?  @map("pdf_url")
+  regeneratedCount Int     @default(0) @map("regenerated_count")
+
+  @@map("bills")
+}
+
+model ServiceCatalog {
+  id           String     @id @default(uuid())
+  department   Department
+  serviceName  String     @map("service_name")
+  standardRate Decimal    @map("standard_rate") @db.Decimal(10, 2)
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@map("service_catalog")
+  @@unique([department, serviceName])
+}
