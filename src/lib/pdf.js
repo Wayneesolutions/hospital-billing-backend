@@ -102,8 +102,11 @@ async function generateFinalBillPdf({ bill, patient, items }) {
 
   const bytes = await doc.save();
   const key = `bills/${bill.id}.pdf`;
-  await uploadBillPdf(key, bytes);
-  return key;
+  // Return whatever uploadBillPdf actually produced (a real S3 key when
+  // S3_BILLS_BUCKET is configured, or a self-contained base64 data URL on
+  // this test deployment) -- not the local `key` var, which discarded the
+  // data-URL fallback and left every bill's pdfUrl as a dead, unresolvable path.
+  return uploadBillPdf(key, bytes);
 }
 
 module.exports = { generateFinalBillPdf };
